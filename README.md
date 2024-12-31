@@ -107,7 +107,7 @@
 1. 克隆我们的仓库并跳转到相应目录
 
 ```bash
-git clone https://github.com/ChengduMinto/WorkBrain.git
+git clone https://github.com/ChengduMinto/WorkBrain-V1.0.git
 cd WorkBrain-V1.0
 ```
 
@@ -268,9 +268,9 @@ python workbrain_main_web.py
 
 - 成都明途科技有限公司
 
-## 引用 <!-- omit in toc -->
+# 引用 <!-- omit in toc -->
 
-如果您觉得我们模型/代码/论文有帮助，请给我们 ⭐ 和 引用 📝，感谢!
+如果您觉得我们模型/代码有帮助，请给我们 ⭐ 和 引用 📝，感谢!
 
 # 联系我们
 如果你想给我们的研发团队和产品团队留言可以通过明途邮箱(BC@mingto.net)或全国统一客服热线(400-001-0224)联系我们。
