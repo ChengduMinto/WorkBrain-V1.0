@@ -1,0 +1,25 @@
+[
+    { "id": "0",
+      "conversations": [
+        {
+          "content": "<image>\nWho are they?",
+          "role": "user"
+        },
+        {
+          "content": "They're Kane and Gretzka from Bayern Munich.",
+          "role": "assistant"
+        },
+        {
+          "content": "What are they doing?",
+          "role": "user"
+        },
+        {
+          "content": "They are celebrating on the soccer field.",
+          "role": "assistant"
+        }
+      ],
+      "image": 
+        "/root/ld/ld_project/LLaMA-Factory/data/mllm_demo_data/1.jpg"
+      }
+    ...以上是单条数据，列表中可存在多个相同格式的数据
+]

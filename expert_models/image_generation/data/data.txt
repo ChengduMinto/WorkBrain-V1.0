@@ -1,0 +1,18 @@
+该数据集主要被用于训练文生图模型。
+
+该数据集由1200条（图像、描述）对组成，左边是图像，右边是对它的描述：
+
+训练命令：
+python train.py \
+  --use_ema \
+  --resolution=512 --center_crop --random_flip \
+  --train_batch_size=1 \
+  --gradient_accumulation_steps=4 \
+  --gradient_checkpointing \
+  --max_train_steps=15000 \
+  --learning_rate=1e-05 \
+  --max_grad_norm=1 \
+  --seed=42 \
+  --lr_scheduler="constant" \
+  --lr_warmup_steps=0 \
+  --output_dir="sd-naruto-model"
