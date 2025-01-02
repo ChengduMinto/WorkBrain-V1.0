@@ -222,7 +222,7 @@ class.txt：标签类别（文本）
 
     <img src="./imgs/门控网络结构图.png"
     alt= "More samples."
-    style="width: 400px;" />
+    style="width: 600px;" />
     
 - 文本生成模型的零抑制模块
 
