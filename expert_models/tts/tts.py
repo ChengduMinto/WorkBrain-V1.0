@@ -41,7 +41,6 @@ def send_request_and_save_audio(text, output_path="output_audio.wav"):
     except requests.exceptions.RequestException as e:
         return {"error": "网络请求异常", "details": str(e)}
 
-# 示例调用
 if __name__ == "__main__":
     example_text = "先帝创业未半?中道崩殂，今天下三分，益州疲弊，此诚危急存亡之秋也。"
     audio_file_path = send_request_and_save_audio(example_text)
