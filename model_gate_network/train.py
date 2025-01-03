@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # author: wjhan
 # date: 2024/10/23
+
 import os
 import time
 from tqdm import tqdm
@@ -12,61 +13,53 @@ import torch
 from torch.optim import AdamW
 from torch.nn import CrossEntropyLoss
 from sklearn.metrics import accuracy_score
-import os
+
+# 设置环境变量
 os.environ['CUDA_LAUNCH_BLOCKING'] = "0,1,2"
 
-def train(model, device, trainLoader, opt, epoch):
+def train(model, device, train_loader, optimizer, epoch):
     model.train()
     loss_sum, count = 0, 0
-    for batch_index, batch_con in enumerate(trainLoader):
+    for batch_index, batch_con in enumerate(train_loader):
         batch_con = tuple(p.to(device) for p in batch_con)
         pred = model(batch_con)
 
-        opt.zero_grad()
-        # print(pred.shape, batch_con[-1].shape)
-        # print(batch_con[-1])
+        optimizer.zero_grad()
         loss = loss_fn(pred, batch_con[-1].long())
-        # loss = loss_fn(pred, batch_con[-1])
         loss.backward()
-        opt.step()
-        loss_sum += loss
+        optimizer.step()
+        
+        loss_sum += loss.item()
         count += 1
 
-        if len(trainLoader) - batch_index <= len(trainLoader) % 100 and count == len(trainLoader) % 100:
+        if batch_index % 100 == 99 or batch_index == len(train_loader) - 1:
             msg = "[{0}/{1:5d}]\tTrain_Loss:{2:.4f}"
             print(msg.format(epoch + 1, batch_index + 1, loss_sum / count))
             loss_sum, count = 0.0, 0
 
-        if batch_index % 100 == 99:
-            msg = "[{0}/{1:5d}]\tTrain_Loss:{2:.4f}"
-            print(msg.format(epoch + 1, batch_index + 1, loss_sum / count))
-            loss_sum, count = 0.0, 0
-
-
-def dev(model, device, devLoader, save_best):
+def validate(model, device, dev_loader, save_best_path):
     global acc_min
     model.eval()
     all_true, all_pred = [], []
-    for batch_con in tqdm(devLoader):
-        batch_con = tuple(p.to(device) for p in batch_con)
-        pred = model(batch_con)
+    with torch.no_grad():
+        for batch_con in tqdm(dev_loader):
+            batch_con = tuple(p.to(device) for p in batch_con)
+            pred = model(batch_con)
+            pred = torch.argmax(pred, dim=1)
 
-        pred = torch.argmax(pred, dim=1)
+            pred_label = pred.cpu().numpy().tolist()
+            true_label = batch_con[-1].cpu().numpy().tolist()
 
-        pred_label = pred.cpu().numpy().tolist()
-        true_label = batch_con[-1].cpu().numpy().tolist()
-
-        all_true.extend(true_label)
-        all_pred.extend(pred_label)
+            all_true.extend(true_label)
+            all_pred.extend(pred_label)
 
     acc = accuracy_score(all_true, all_pred)
-    print(f"dev acc:{acc:.4f}")
+    print(f"dev acc: {acc:.4f}")
 
     if acc > acc_min:
         acc_min = acc
-        torch.save(model.state_dict(), save_best)
-        print(f"以保存最佳模型")
-
+        torch.save(model.state_dict(), save_best_path)
+        print(f"Best model saved with accuracy: {acc:.4f}")
 
 if __name__ == "__main__":
     start = time.time()
@@ -76,36 +69,34 @@ if __name__ == "__main__":
     train_text, train_label = read_data(args.train_file)
     dev_text, dev_label = read_data(args.dev_file)
 
-    trainData = MyDataset(train_text, train_label, with_labels=True)
-    trainLoader = DataLoader(trainData, batch_size=args.batch_size, shuffle=True)
+    train_data = MyDataset(train_text, train_label, with_labels=True)
+    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
 
-    devData = MyDataset(dev_text, dev_label, with_labels=True)
-    devLoader = DataLoader(devData, batch_size=args.batch_size, shuffle=True)
+    dev_data = MyDataset(dev_text, dev_label, with_labels=True)
+    dev_loader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=True)
 
     root, name = os.path.split(args.save_model_best)
-    save_best = os.path.join(root, str(args.select_model_last) + "_" +name)
+    save_best_path = os.path.join(root, str(args.select_model_last) + "_" + name)
     root, name = os.path.split(args.save_model_last)
-    save_last = os.path.join(root, str(args.select_model_last) + "_" +name)
+    save_last_path = os.path.join(root, str(args.select_model_last) + "_" + name)
 
     # 选择模型
     if args.select_model_last:
-        # 模型1
         model = BertTextModel_last_layer().to(device)
     else:
-        # 模型2
         model = BertTextModel_encode_layer().to(device)
 
-    opt = AdamW(model.parameters(), lr=args.learn_rate)
+    optimizer = AdamW(model.parameters(), lr=args.learn_rate)
     loss_fn = CrossEntropyLoss()
 
     acc_min = float("-inf")
     for epoch in range(args.epochs):
-        train(model, device, trainLoader, opt, epoch)
-        dev(model, device, devLoader, save_best)
-
+        train(model, device, train_loader, optimizer, epoch)
+        validate(model, device, dev_loader, save_best_path)
 
     model.eval()
-    torch.save(model.state_dict(), save_last)
+    torch.save(model.state_dict(), save_last_path)
+    print(f"Last model saved.")
 
     end = time.time()
-    print(f"运行时间：{(end-start)/60%60:.4f} min")
+    print(f"Total run time: {(end - start) / 60:.2f} minutes")

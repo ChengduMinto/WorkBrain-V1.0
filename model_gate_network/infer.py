@@ -7,11 +7,12 @@ import sys
 import os
 import requests
 
+# 将项目根目录添加到 sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from expert_models.experts2 import (
+from expert_models.experts import (
     text_generation, image_understanding, image_generation, asr, tts, document_qa, external_services
 )
 
@@ -25,15 +26,15 @@ tools = {
     "外部接口能力": external_services
 }
 
-# POST API配置信息
+# POST API 配置信息
 api_url = "http://localhost:8001/predict"
 
 # 构建门控网络逻辑
 def gated_network(instruction, tools):
     # 构建请求数据
-    data = {"text":instruction}
+    data = {"text": instruction}
     
-    # 发送POST请求
+    # 发送 POST 请求
     response = requests.post(api_url, json=data)
     
     # 检查响应状态
@@ -44,12 +45,10 @@ def gated_network(instruction, tools):
     # 解析响应
     try:
         response_data = response.json()
-
-    
         return response_data['prediction']['class_probabilities']
 
     except Exception as e:
-        print(f"Error parsing probabilities: {e}")
+        print(f"解析概率时出错: {e}")
         return None
 
 if __name__ == '__main__':
@@ -58,7 +57,6 @@ if __name__ == '__main__':
 
     # 调用门控网络逻辑
     probabilities = gated_network(input_text, tools)
-    print(probabilities)
     if probabilities is not None:
         print("\n工具及其概率:")
         for tool_name, probability in probabilities.items():

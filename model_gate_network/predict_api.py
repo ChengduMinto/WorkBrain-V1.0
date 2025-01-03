@@ -7,7 +7,8 @@ import torch
 from transformers import BertTokenizer
 from model import BertTextModel_last_layer, BertTextModel_encode_layer  # 模型模块
 from config import parsers  # 配置模块
-import json,os
+import json
+import os
 import time
 
 app = FastAPI()
@@ -22,7 +23,7 @@ def load_model(model_path, device, args):
         model = BertTextModel_last_layer().to(device)
     else:
         model = BertTextModel_encode_layer().to(device)
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
 
@@ -44,7 +45,7 @@ def text_class_name(text, pred, args):
 
 # 预测单个文本
 def pred_one(args, model, device, text):
-    tokenizer = BertTokenizer.from_pretrained(parsers().bert_pred)
+    tokenizer = BertTokenizer.from_pretrained(args.bert_pred)
     encoded_pair = tokenizer(text, padding='max_length', truncation=True, max_length=args.max_len, return_tensors='pt')
     token_ids = encoded_pair['input_ids'].to(device)
     attn_masks = encoded_pair['attention_mask'].to(device)
@@ -75,6 +76,7 @@ async def predict(request: TextRequest):
         return {"prediction": prediction}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

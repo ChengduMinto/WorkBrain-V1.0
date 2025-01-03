@@ -11,11 +11,12 @@ import torch.nn.functional as F
 class TextCnnModel(nn.Module):
     def __init__(self):
         super(TextCnnModel, self).__init__()
-        self.num_filter_total = parsers().num_filters * len(parsers().filter_sizes)
-        self.Weight = nn.Linear(self.num_filter_total, parsers().class_num, bias=False)
-        self.bias = nn.Parameter(torch.ones([parsers().class_num]))
+        args = parsers()
+        self.num_filter_total = args.num_filters * len(args.filter_sizes)
+        self.Weight = nn.Linear(self.num_filter_total, args.class_num, bias=False)
+        self.bias = nn.Parameter(torch.ones([args.class_num]))
         self.filter_list = nn.ModuleList([
-            nn.Conv2d(1, parsers().num_filters, kernel_size=(size, parsers().hidden_size)) for size in parsers().filter_sizes
+            nn.Conv2d(1, args.num_filters, kernel_size=(size, args.hidden_size)) for size in args.filter_sizes
         ])
 
     def forward(self, x):
@@ -32,7 +33,7 @@ class TextCnnModel(nn.Module):
             pooled = maxPool(out).permute(0, 3, 2, 1)  # [batch_size, h=1, w=1, channel=2]
             pooled_outputs.append(pooled)
 
-        h_pool = torch.cat(pooled_outputs, len(parsers().filter_sizes))  # [batch_size, h=1, w=1, channel=2 * 3]
+        h_pool = torch.cat(pooled_outputs, 1)  # 合并在 channel 维度: [batch_size, h=1, w=1, channel=2 * 3]
         h_pool_flat = torch.reshape(h_pool, [-1, self.num_filter_total])  # [batch_size, 6]
 
         output = self.Weight(h_pool_flat) + self.bias  # [batch_size, class_num]
@@ -43,12 +44,13 @@ class TextCnnModel(nn.Module):
 class BertTextModel_encode_layer(nn.Module):
     def __init__(self):
         super(BertTextModel_encode_layer, self).__init__()
-        self.bert = BertModel.from_pretrained(parsers().bert_pred)
+        args = parsers()
+        self.bert = BertModel.from_pretrained(args.bert_pred)
 
         for param in self.bert.parameters():
             param.requires_grad = True
 
-        self.linear = nn.Linear(parsers().hidden_size, parsers().class_num)
+        self.linear = nn.Linear(args.hidden_size, args.class_num)
         self.textCnn = TextCnnModel()
 
     def forward(self, x):
@@ -71,24 +73,25 @@ class BertTextModel_encode_layer(nn.Module):
 class BertTextModel_last_layer(nn.Module):
     def __init__(self):
         super(BertTextModel_last_layer, self).__init__()
-        self.bert = BertModel.from_pretrained(parsers().bert_pred)
+        args = parsers()
+        self.bert = BertModel.from_pretrained(args.bert_pred)
         for param in self.bert.parameters():
             param.requires_grad = True
 
         # TextCNN
         self.convs = nn.ModuleList(
-            [nn.Conv2d(in_channels=1, out_channels=parsers().num_filters, kernel_size=(k, parsers().hidden_size),) for k in parsers().filter_sizes]
+            [nn.Conv2d(in_channels=1, out_channels=args.num_filters, kernel_size=(k, args.hidden_size)) for k in args.filter_sizes]
         )
-        self.dropout = nn.Dropout(parsers().dropout)
-        self.fc = nn.Linear(parsers().num_filters * len(parsers().filter_sizes), parsers().class_num)
+        self.dropout = nn.Dropout(args.dropout)
+        self.fc = nn.Linear(args.num_filters * len(args.filter_sizes), args.class_num)
 
     def conv_pool(self, x, conv):
-        x = conv(x)  # shape [batch_size, out_channels, x.shape[1] - conv.kernel_size[0] + 1, 1]
+        x = conv(x)  # shape [batch_size, out_channels, x.shape[2] - conv.kernel_size[0] + 1, 1]
         x = F.relu(x)
-        x = x.squeeze(3)  # shape [batch_size, out_channels, x.shape[1] - conv.kernel_size[0] + 1]
+        x = x.squeeze(3)  # shape [batch_size, out_channels, x.shape[2] - conv.kernel_size[0] + 1]
         size = x.size(2)
-        x = F.max_pool1d(x, size)   # shape[batch+size, out_channels, 1]
-        x = x.squeeze(2)  # shape[batch+size, out_channels]
+        x = F.max_pool1d(x, size)   # shape[batch_size, out_channels, 1]
+        x = x.squeeze(2)  # shape[batch_size, out_channels]
         return x
 
     def forward(self, x):
@@ -96,7 +99,7 @@ class BertTextModel_last_layer(nn.Module):
         hidden_out = self.bert(input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids,
                                output_hidden_states=False)
         out = hidden_out.last_hidden_state.unsqueeze(1)   # shape [batch_size, 1, max_len, hidden_size]
-        out = torch.cat([self.conv_pool(out, conv) for conv in self.convs], 1)  # shape  [batch_size, parsers().num_filters * len(parsers().filter_sizes]
+        out = torch.cat([self.conv_pool(out, conv) for conv in self.convs], 1)  # shape  [batch_size, args.num_filters * len(args.filter_sizes)]
         out = self.dropout(out)
         out = self.fc(out)
         return out
