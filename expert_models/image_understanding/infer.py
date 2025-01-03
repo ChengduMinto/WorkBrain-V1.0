@@ -10,7 +10,7 @@ from PIL import Image
 from modelscope import AutoModel, AutoTokenizer
 
 # #加载模型
-model_dir =  "./expert_models/image_understanding/image_understanding_model"
+model_dir =  "./weight"
 model = AutoModel.from_pretrained(model_dir, trust_remote_code=True,
     attn_implementation='sdpa', torch_dtype=torch.bfloat16) # sdpa or flash_attention_2, no eager
 model = model.eval().cuda()

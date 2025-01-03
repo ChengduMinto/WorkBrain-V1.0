@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # author: wjhan
 # date: 2024/10/28
-from expert_models.experts2 import (
+from expert_models.experts import (
                             text_generation, image_understanding, video_understanding,image_generation,asr,tts,document_qa,external_services
                             )
 

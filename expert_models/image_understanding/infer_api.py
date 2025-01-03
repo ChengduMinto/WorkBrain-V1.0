@@ -14,7 +14,7 @@ import base64
 app = FastAPI()
 
 # 加载模型
-model_dir = "./image_understanding_model"
+model_dir = "./weight"
 device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")  # 指定使用哪块GPU，如cuda:0、cuda:1等
 model = AutoModel.from_pretrained(model_dir, trust_remote_code=True,
                                   attn_implementation='sdpa', torch_dtype=torch.bfloat16)
